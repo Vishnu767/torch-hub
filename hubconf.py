@@ -21,7 +21,43 @@ classes = [
     "Ankle boot",
 ]
 
-# Define model
+
+# Loading the FashionMNIST dataset
+def load_data():
+
+    # Download training data from open datasets
+    training_data = datasets.FashionMNIST(
+        root="data",
+        train=True,
+        download=True,
+        transform=ToTensor(),
+    )
+
+    # Download test data from open datasets
+    test_data = datasets.FashionMNIST(
+        root="data",
+        train=False,
+        download=True,
+        transform=ToTensor(),
+    )
+    
+    return training_data, test_data
+
+# Create data loaders
+def create_dataloaders(training_data, test_data, batch_size=64):
+
+    # Create data loaders.
+    train_dataloader = DataLoader(training_data, batch_size=batch_size)
+    test_dataloader = DataLoader(test_data, batch_size=batch_size)
+
+    for X, y in test_dataloader:
+        print(f"Shape of X [N, C, H, W]: {X.shape}")
+        print(f"Shape of y: {y.shape} {y.dtype}")
+        break
+        
+    return train_dataloader, test_dataloader
+
+# Neural Network class and generate model
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
@@ -38,59 +74,19 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
+    
+def get_model():  
+    model = NeuralNetwork().to(device)
+    return model
 
-#############################
 
+# Loss function and Optimizer
 def get_lossfn_and_optimizer(mymodel):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(mymodel.parameters(), lr=1e-3)
     return loss_fn, optimizer
 
-
-def load_data():
-
-    # Download training data from open datasets.
-    training_data = datasets.FashionMNIST(
-        root="data",
-        train=True,
-        download=True,
-        transform=ToTensor(),
-    )
-
-    # Download test data from open datasets.
-    test_data = datasets.FashionMNIST(
-        root="data",
-        train=False,
-        download=True,
-        transform=ToTensor(),
-    )
-    
-    return training_data, test_data
-
-#############################
-
-def create_dataloaders(training_data, test_data, batch_size=64):
-
-    # Create data loaders.
-    train_dataloader = DataLoader(training_data, batch_size=batch_size)
-    test_dataloader = DataLoader(test_data, batch_size=batch_size)
-
-    for X, y in test_dataloader:
-        print(f"Shape of X [N, C, H, W]: {X.shape}")
-        print(f"Shape of y: {y.shape} {y.dtype}")
-        break
-        
-    return train_dataloader, test_dataloader
-  
-#############################
-
-def get_model():
-    
-    model = NeuralNetwork().to(device)
-
-    return model
-
-
+# Train function
 def _train(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
     model.train()
@@ -109,7 +105,9 @@ def _train(dataloader, model, loss_fn, optimizer):
         if batch % 100 == 0:
             loss, current = loss.item(), batch * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-            
+
+
+# Test function            
 def _test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
@@ -124,8 +122,10 @@ def _test(dataloader, model, loss_fn):
     test_loss /= num_batches
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-    
-def train(train_dataloader, test_dataloader, model1, loss_fn1, optimizer1, epochs=5):
+
+
+# Main training function which runs for 5 epochs 
+def train(train_dataloader, test_dataloader, model1, loss_fn1, optimizer1, epochs):
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         _train(train_dataloader, model1, loss_fn1, optimizer1)
@@ -133,6 +133,7 @@ def train(train_dataloader, test_dataloader, model1, loss_fn1, optimizer1, epoch
     print("Done!")
     return model1
 
+# Save and load models
 def save_model(model1,mypath="model.pth"):
     torch.save(model1.state_dict(), "model.pth")
     print("Saved PyTorch Model State to model.pth")
@@ -142,7 +143,7 @@ def load_model(mypath="model.pth"):
     model.load_state_dict(torch.load("model.pth"))
     return model
 
-
+# Testing the model
 def sample_test(model1, test_data):
     model1.eval()
     x, y = test_data[0][0], test_data[0][1]
